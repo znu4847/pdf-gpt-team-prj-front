@@ -1,5 +1,5 @@
 import streamlit as st
-import requests
+from utils import rest
 
 st.set_page_config(page_title="Main")
 
@@ -10,7 +10,7 @@ st.sidebar.write("This is the main page")
 
 def check_logged_in():
     print("check_logged_in start")
-    response = requests.get("http://localhost:8000/api/v1/users/auth")
+    response = rest.get("users/auth")
     print(" is user logged in?")
     print(response.status_code)
     if response.status_code == 401:

@@ -1,4 +1,5 @@
 import streamlit as st
+from utils import rest
 
 if not st.session_state.get("user"):
     st.session_state["user"] = {}
@@ -6,6 +7,7 @@ if not st.session_state.get("user"):
 
 def logout():
     st.session_state["user"] = {}
+    rest.reset_jwt()
     st.rerun()
 
 

@@ -1,5 +1,5 @@
 import streamlit as st
-import requests
+from utils import rest
 
 st.set_page_config(page_title="Register")
 
@@ -23,13 +23,13 @@ def regist_submit():
     print("regist_btn!")
     print(form)
 
-    response = requests.post("http://localhost:8000/api/v1/users/", json=form)
+    response = rest.post("users/", form)
     print("response check222")
     print(response.status_code)
     try:
         data = response.json()
         print(data)
-    except:
+    except Exception:
         st.error("Internal Server Error")
         return False
 
@@ -46,7 +46,11 @@ def regist_submit():
         return False
     # bad request
     elif response.status_code == 400:
-        st.error(data["error"])
+        errors = data["errors"]
+        # error_message = ""
+        for error in errors:
+            # error_message += f"{error}\r\n"
+            st.error(error)
         return False
     # else
     else:
@@ -67,6 +71,3 @@ else:
 def reset_user():
     st.session_state["user"] = {}
     st.success("Reset Success")
-
-
-reset_btn = st.button(label="Reset", key="reset", on_click=reset_user)

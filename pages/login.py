@@ -1,5 +1,5 @@
 import streamlit as st
-import requests
+from utils import rest
 
 
 # commit test
@@ -36,15 +36,13 @@ def login_submit():
 
     # api call
     try:
-        response = requests.post("http://localhost:8000/api/v1/users/login", json=form)
+        response = rest.post("users/login", form)
         data = response.json()
-    except:
+        print(data)
+        rest.set_jwt(data["jwt"])
+    except Exception:
         st.error("Internal Server Error")
         return False
-
-    print("--- response check ---")
-    print(response.status_code)
-    print(data)
 
     # success
     if response.status_code == 200:
@@ -68,7 +66,6 @@ def reset_user():
 
 
 ## Page Contents
-
 user = st.session_state.get("user")
 if user and user.get("username"):
     st.write(f"Welcome {user['username']}")
@@ -76,7 +73,3 @@ else:
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
     login_btn = st.button(label="Login", key="login", on_click=login_submit)
-    register_btn = st.button(label="Register", key="register")
-
-
-reset_btn = st.button(label="Reset", key="reset", on_click=reset_user)
