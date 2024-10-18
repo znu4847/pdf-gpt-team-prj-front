@@ -6,6 +6,7 @@ import requests
 st.set_page_config(page_title="Log in", initial_sidebar_state="collapsed")
 username = st.session_state["user"].get("username")
 
+# collapse sidebar
 st.markdown(
     """
 <style>
