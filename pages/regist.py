@@ -26,8 +26,12 @@ def regist_submit():
     response = requests.post("http://localhost:8000/api/v1/users/", json=form)
     print("response check222")
     print(response.status_code)
-    data = response.json()
-    print(data)
+    try:
+        data = response.json()
+        print(data)
+    except:
+        st.error("Internal Server Error")
+        return False
 
     # created
     if response.status_code == 201:

@@ -33,8 +33,15 @@ def login_submit():
     print(form)
 
     # api call
-    response = requests.post("http://localhost:8000/api/v1/users/login", json=form)
-    data = response.json()
+    try:
+        response = requests.post("http://localhost:8000/api/v1/users/login", json=form)
+        data = response.json()
+    except:
+        st.error("Internal Server Error")
+        return False
+
+    print("--- response check ---")
+    print(response.status_code)
     print(data)
 
     # success
