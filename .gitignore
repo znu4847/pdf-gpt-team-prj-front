@@ -1,8 +1,10 @@
 .venv/
 .env
 study/06.RAG/.cache
+.streamlit
 .cache
 test
+vectorstore
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
