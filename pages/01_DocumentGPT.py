@@ -10,11 +10,34 @@ from langchain.vectorstores import FAISS
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 import streamlit as st
+from utils import rest
 
 load_dotenv()  # .env 파일 로드
 
+# 개발 모드일 때 테스트 유저 정보 설정
+if os.environ.get("DEV_MODE"):
+    # set test user info
+    rest.set_jwt(os.getenv("TEST_USER_TOKEN"))  # JWT 설정
+    st.session_state["user"] = {
+        "username": os.getenv("TEST_USER_USERNAME"),
+        "user_id": os.getenv("TEST_USER_PK"),
+    }
+
+# 대화 ID 초기화
+if "conversation_id" not in st.session_state:
+    st.session_state["conversation_id"] = None
+# 메시지 초기화
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
+
+
+def load_conversations():
+    response = rest.get("conversations/")
+    st.session_state["conversations"] = response.json()["data"]
+
+
+if "conversations" not in st.session_state:
+    load_conversations()
 
 
 def get_memory():
@@ -36,6 +59,28 @@ def embed_file(file):
         os.makedirs(folder_path)
     with open(file_path, "wb") as f:
         f.write(file_content)
+    embed_path = f"./.cache/embeddings/{file.name}"
+    # retriever 초기화
+    retriever = initialize_retriever(file_path, embed_path)
+
+    user = st.session_state["user"]
+
+    response = rest.post(
+        "conversations/",
+        {
+            "user": user["user_id"],
+            "title": file.name,
+            "pdf_url": file_path,
+            "embed_url": embed_path,
+        },
+    )
+    st.session_state["conversation_id"] = response.json()["pk"]
+    load_conversations()
+
+    return retriever
+
+
+def initialize_retriever(file_path, embed_path):
     # 불러오기
     loader = PDFPlumberLoader(file_path)
     # 자르기
@@ -47,27 +92,41 @@ def embed_file(file):
     docs = loader.load_and_split(text_splitter=splitter)
     # 임베딩
     embeddings = OpenAIEmbeddings()
-    cache_file_dir = f"./.cache/embeddings/{file.name}"
-    folder_path = os.path.dirname(cache_file_dir)
+    folder_path = os.path.dirname(embed_path)
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
     # 임베딩 캐시
-    cache_dir = LocalFileStore(cache_file_dir)
+    cache_dir = LocalFileStore(embed_path)
     cache_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
     vectorstores = FAISS.from_documents(docs, cache_embeddings)
-    retriever = vectorstores.as_retriever()
-    return retriever
+    return vectorstores.as_retriever()
 
 
-def save_message(message, role):
-    st.session_state["messages"].append({"message": message, "role": role})
+def save_message(text, role):
+    conv_pk = st.session_state["conversation_id"]
+    st.session_state["messages"].append(
+        {
+            "conversation": conv_pk,
+            "text": text,
+            "role": role,
+        }
+    )
+    rest.post(
+        "messages/",
+        {
+            "user": st.session_state["user"]["user_id"],
+            "conversation": conv_pk,
+            "text": text,
+            "role": role,
+        },
+    )
 
 
-def send_message(message, role, save=True):
+def send_message(text, role, save=True):
     with st.chat_message(role):
-        st.markdown(message)
+        st.markdown(text)
     if save:
-        save_message(message, role)
+        save_message(text, role)
 
 
 def paint_history():
@@ -82,7 +141,7 @@ def paint_history():
                     file_name=f"{message['filename']}.txt",
                 )
         else:
-            send_message(message["message"], message["role"], save=False)
+            send_message(message["text"], message["role"], save=False)
 
 
 def format_docs(docs):
@@ -118,6 +177,17 @@ class ChatCallbackHandler(BaseCallbackHandler):
         self.message_box.markdown(self.message)
 
 
+choose_llm = ChatOpenAI(
+    temperature=0.1,
+    model="gpt-4o",
+)
+answer_llm = ChatOpenAI(
+    temperature=0.1,
+    model="gpt-4o",
+    streaming=True,
+    callbacks=[ChatCallbackHandler()],
+)
+
 template = ChatPromptTemplate.from_messages(
     [
         (
@@ -144,25 +214,47 @@ file = None
 
 # 입력 api 확인
 file = st.file_uploader(
-    "Upload a .pdf file",
+    "PDF 파일을 업로드하여 대화를 시작합니다",
     type=["pdf"],
 )
+
+if st.session_state["conversations"] and len(st.session_state["conversations"]) > 0:
+    select_items = [conv for conv in st.session_state["conversations"]]
+
+if select_items:
+    selected_item = st.selectbox(
+        "이전 대화를 계속합니다",
+        select_items,
+        index=None,
+        format_func=lambda x: x["title"],
+    )
+
 if file:
-    choose_llm = ChatOpenAI(
-        temperature=0.1,
-        model="gpt-4o",
-    )
-    answer_llm = ChatOpenAI(
-        temperature=0.1,
-        model="gpt-4o",
-        streaming=True,
-        callbacks=[ChatCallbackHandler()],
-    )
     retriever = embed_file(file)
     send_message("I'm ready! Ask away!", "ai", save=False)
     paint_history()
-    message = st.chat_input("Ask anything about your file...")
 
+
+def load_messages():
+    conversation_id = st.session_state.get("conversation_id")
+    if conversation_id is None:
+        st.session_state["messages"] = []
+        return
+    response = rest.get(f"messages/?conversation={st.session_state['conversation_id']}")
+    st.session_state["messages"] = response.json()
+    paint_history()
+
+
+if selected_item:
+    st.session_state["conversation_id"] = selected_item["pk"]
+    file_path = selected_item["pdf_url"]
+    embed_path = selected_item["embed_url"]
+    retriever = initialize_retriever(file_path, embed_path)
+
+    load_messages()
+
+if len(st.session_state.get("messages")) > 0:
+    message = st.chat_input("Ask anything about your file...")
     if message:
         send_message(message, "human")
         context = format_docs(retriever.get_relevant_documents(message))

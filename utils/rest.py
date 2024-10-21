@@ -30,16 +30,10 @@ def get(end_point):
 
 
 def post(end_point, form):
-    print("-------------- post -------------- 1")
-    print(end_point)
-    print("-------------- post -------------- 2")
     # post api call with header
     response = requests.post(
         f"http://localhost:8000/api/v1/{end_point}", json=form, headers=get_jwt_header()
     )
-    print("-------------- post -------------- 3")
-    print(response.status_code)
-    print(response.json())
     if response.status_code == 200 or response.status_code == 201:
         data = response.json()
         if "jwt" in data:
