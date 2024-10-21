@@ -10,4 +10,3 @@ chat_pages = [document_page]
 pg = st.navigation({"Chat": chat_pages})
 
 pg.run()
-import streamlit as st
