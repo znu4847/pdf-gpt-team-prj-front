@@ -1,6 +1,5 @@
 import os
 from dotenv import load_dotenv
-from openai import OpenAI
 from langchain.chat_models import ChatOpenAI
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.document_loaders.pdf import PDFPlumberLoader
@@ -11,8 +10,6 @@ from langchain.vectorstores import FAISS
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 import streamlit as st
-
-client = OpenAI()
 
 load_dotenv()  # .env 파일 로드
 
@@ -27,17 +24,6 @@ def get_memory():
             memory_key="chat_history",
         )
     return st.session_state["chat_memory"]
-
-
-def check_api_key(api_key):
-    try:
-        client.api_key = api_key
-        client.models.list()
-        os.environ["OPENAI_API_KEY"] = api_key
-        return True
-    except Exception:
-        st.error("Wrong API Key")
-        return False
 
 
 @st.cache_resource(show_spinner="Embedding file...")
@@ -154,55 +140,33 @@ Context:{context}
 
 st.title("DocumentGPT")
 
-with st.sidebar:
-    # api 입력
-    with st.form("api_key"):
-        api_key = st.text_input(label="Enter your OpenAI API key")
-        submit = st.form_submit_button("Submit")
-    model = "gpt-4o"  # "gpt-4o-mini"
-
 file = None
 
 # 입력 api 확인
-if check_api_key(api_key):
-    with st.sidebar:
-        file = st.file_uploader(
-            "Upload a .pdf file",
-            type=["pdf"],
-        )
-    if file:
-        choose_llm = ChatOpenAI(
-            temperature=0.1,
-            model=model,
-        )
-        answer_llm = ChatOpenAI(
-            temperature=0.1,
-            model=model,
-            streaming=True,
-            callbacks=[ChatCallbackHandler()],
-        )
-        retriever = embed_file(file)
-        send_message("I'm ready! Ask away!", "ai", save=False)
-        paint_history()
-        message = st.chat_input("Ask anything about your file...")
-
-        if message:
-            send_message(message, "human")
-            context = format_docs(retriever.get_relevant_documents(message))
-            chain = template | answer_llm
-
-            with st.chat_message("ai"):
-                invoke_chain(chain, message, context)
-
-if not file:
-    st.markdown(
-        """
-    Welcome!
-                
-    Use this chatbot to ask questions to an AI about your files!
-                
-    1. Input your OpenAI API key.
-                
-    2. Upload your pdf on the sidebar.
-    """
+file = st.file_uploader(
+    "Upload a .pdf file",
+    type=["pdf"],
+)
+if file:
+    choose_llm = ChatOpenAI(
+        temperature=0.1,
+        model="gpt-4o",
     )
+    answer_llm = ChatOpenAI(
+        temperature=0.1,
+        model="gpt-4o",
+        streaming=True,
+        callbacks=[ChatCallbackHandler()],
+    )
+    retriever = embed_file(file)
+    send_message("I'm ready! Ask away!", "ai", save=False)
+    paint_history()
+    message = st.chat_input("Ask anything about your file...")
+
+    if message:
+        send_message(message, "human")
+        context = format_docs(retriever.get_relevant_documents(message))
+        chain = template | answer_llm
+
+        with st.chat_message("ai"):
+            invoke_chain(chain, message, context)
