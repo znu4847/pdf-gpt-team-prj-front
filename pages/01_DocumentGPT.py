@@ -12,7 +12,8 @@ import streamlit as st
 from utils import rest
 
 # 개발 모드일 때 테스트 유저 정보 설정
-if os.environ.get("DEV_MODE"):
+dev_mode = os.environ.get("DEV_MODE") == "True"
+if dev_mode:
     # set test user info
     rest.set_jwt(os.getenv("TEST_USER_TOKEN"))  # JWT 설정
     st.session_state["user"] = {
