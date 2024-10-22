@@ -214,23 +214,50 @@ st.title("DocumentGPT")
 file = None
 
 # 입력 api 확인
-file = st.file_uploader(
-    "PDF 파일을 업로드하여 대화를 시작합니다",
-    type=["pdf"],
-)
+# 241022 sidebar로 file uploader 이동
+with st.sidebar:
+    file = st.file_uploader(
+        "PDF 파일을 업로드하여 대화를 시작합니다",
+        type=["pdf"],
+    )
 
 select_items = None
 selected_item = None
 if st.session_state["conversations"] and len(st.session_state["conversations"]) > 0:
     select_items = [conv for conv in st.session_state["conversations"]]
 
+
+@st.dialog("Chage Title")
+def change_title():
+    title = st.text_input("변경할 제목을 입력하세요")
+    if st.button("제출"):
+        # for conversation in st.session_state["conversations"]:
+        #     if conversation["pk"] == st.session_state["conversation_id"]:
+        #         conversation.[title] = title
+        #         break
+        response = rest.put(
+            f"conversations/{st.session_state['conversation_id']}",
+            {
+                "title": title,
+            },
+        )
+        load_conversations()
+        st.rerun()
+        return response
+
+
 if select_items:
-    selected_item = st.selectbox(
-        "이전 대화를 계속합니다",
-        select_items,
-        index=None,
-        format_func=lambda x: x["title"],
-    )
+    # 241022 sidebar로 select box 이동
+    with st.sidebar:
+        selected_item = st.selectbox(
+            "이전 대화를 계속합니다",
+            select_items,
+            index=None,
+            format_func=lambda x: x["title"],
+        )
+        if st.button("Change Title"):
+            response = change_title()
+
 if file:
     retriever = embed_file(file)
     send_message("I'm ready! Ask away!", "ai", save=False)

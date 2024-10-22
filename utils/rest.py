@@ -19,7 +19,7 @@ def reset_jwt():
 
 def get(end_point):
     response = requests.get(
-        f"http://localhost:8000/api/v1/{end_point}", headers=get_jwt_header()
+        f"http://localhost:9000/api/v1/{end_point}", headers=get_jwt_header()
     )
     if response.status_code == 200 or response.status_code == 201:
         data = response.json()
@@ -32,7 +32,20 @@ def get(end_point):
 def post(end_point, form):
     # post api call with header
     response = requests.post(
-        f"http://localhost:8000/api/v1/{end_point}", json=form, headers=get_jwt_header()
+        f"http://localhost:9000/api/v1/{end_point}", json=form, headers=get_jwt_header()
+    )
+    if response.status_code == 200 or response.status_code == 201:
+        data = response.json()
+        if "jwt" in data:
+            set_jwt(data["jwt"])
+
+    return response
+
+
+def put(end_point, form):
+    # post api call with header
+    response = requests.put(
+        f"http://localhost:9000/api/v1/{end_point}", json=form, headers=get_jwt_header()
     )
     if response.status_code == 200 or response.status_code == 201:
         data = response.json()
