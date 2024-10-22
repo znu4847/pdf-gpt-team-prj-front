@@ -31,14 +31,10 @@ def login_submit():
         "password": password,
     }
 
-    print("login_btn!")
-    print(form)
-
     # api call
     try:
         response = rest.post("users/login", form)
         data = response.json()
-        print(data)
         rest.set_jwt(data["jwt"])
     except Exception:
         st.error("Internal Server Error")
@@ -47,9 +43,11 @@ def login_submit():
     # success
     if response.status_code == 200:
         st.session_state["user"] = {
-            "username": username,
+            "username": data["username"],
+            "user_id": data["pk"],
         }
         st.success("Login Success")
+        st.rerun()
         return True
     # bad request
     elif response.status_code == 400:
@@ -70,6 +68,10 @@ user = st.session_state.get("user")
 if user and user.get("username"):
     st.write(f"Welcome {user['username']}")
 else:
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    login_btn = st.button(label="Login", key="login", on_click=login_submit)
+    with st.form("login_form", enter_to_submit=True):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        login_btn = st.form_submit_button("Login")
+
+    if login_btn:
+        login_submit()

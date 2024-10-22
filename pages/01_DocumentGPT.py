@@ -1,5 +1,4 @@
 import os
-from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.document_loaders.pdf import PDFPlumberLoader
@@ -11,8 +10,6 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 import streamlit as st
 from utils import rest
-
-load_dotenv()  # .env 파일 로드
 
 # 개발 모드일 때 테스트 유저 정보 설정
 if os.environ.get("DEV_MODE"):
@@ -49,6 +46,9 @@ def get_memory():
     return st.session_state["chat_memory"]
 
 
+retriever = None
+
+
 @st.cache_resource(show_spinner="Embedding file...")
 def embed_file(file):
     # file저장
@@ -74,6 +74,7 @@ def embed_file(file):
             "embed_url": embed_path,
         },
     )
+    st.session_state["messages"] = []
     st.session_state["conversation_id"] = response.json()["pk"]
     load_conversations()
 
@@ -218,6 +219,8 @@ file = st.file_uploader(
     type=["pdf"],
 )
 
+select_items = None
+selected_item = None
 if st.session_state["conversations"] and len(st.session_state["conversations"]) > 0:
     select_items = [conv for conv in st.session_state["conversations"]]
 
@@ -228,7 +231,6 @@ if select_items:
         index=None,
         format_func=lambda x: x["title"],
     )
-
 if file:
     retriever = embed_file(file)
     send_message("I'm ready! Ask away!", "ai", save=False)
@@ -246,6 +248,7 @@ def load_messages():
 
 
 if selected_item:
+    st.session_state["messages"] = []
     st.session_state["conversation_id"] = selected_item["pk"]
     file_path = selected_item["pdf_url"]
     embed_path = selected_item["embed_url"]
@@ -253,7 +256,7 @@ if selected_item:
 
     load_messages()
 
-if len(st.session_state.get("messages")) > 0:
+if retriever:
     message = st.chat_input("Ask anything about your file...")
     if message:
         send_message(message, "human")
