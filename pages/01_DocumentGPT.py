@@ -23,6 +23,11 @@ if os.environ.get("DEV_MODE"):
 # 대화 ID 초기화
 if "conversation_id" not in st.session_state:
     st.session_state["conversation_id"] = None
+
+# 대화 변경 체크를 위한 ID 초기화
+if "bef_conversation_id" not in st.session_state:
+    st.session_state["bef_conversation_id"] = None
+
 # 메시지 초기화
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
@@ -161,6 +166,8 @@ def invoke_chain(chain, message, context):
 
 
 def memory_load():
+    print("memory_load")
+    print(get_memory().load_memory_variables({})["chat_history"])
     return get_memory().load_memory_variables({})["chat_history"]
 
 
@@ -274,14 +281,30 @@ def load_messages():
     paint_history()
 
 
+def save_memory_history():
+    get_memory().clear()
+    messages = st.session_state["messages"]
+    for i in range(0, len(messages), 2):
+        if st.session_state["conversation_id"]:
+            human_message = messages[i]
+            ai_message = messages[i + 1]
+            if human_message["role"] != "human" or ai_message["role"] != "ai":
+                print("Error - human, ai 둘 다 아님!!!!")
+            question = human_message["text"]
+            answer = ai_message["text"]
+            get_memory().save_context({"input": question}, {"output": answer})
+
+
 if selected_item:
     st.session_state["messages"] = []
     st.session_state["conversation_id"] = selected_item["pk"]
     file_path = selected_item["pdf_url"]
     embed_path = selected_item["embed_url"]
     retriever = initialize_retriever(file_path, embed_path)
-
     load_messages()
+    if st.session_state["bef_conversation_id"] != st.session_state["conversation_id"]:
+        st.session_state["bef_conversation_id"] = st.session_state["conversation_id"]
+        save_memory_history()
 
 if retriever:
     message = st.chat_input("Ask anything about your file...")
