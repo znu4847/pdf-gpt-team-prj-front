@@ -59,5 +59,4 @@ else:
     pg = st.navigation(
         {"Account": account_pages, "Main": chat_pages},
     )
-# st.write("1")
 pg.run()
