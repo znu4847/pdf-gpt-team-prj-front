@@ -45,11 +45,35 @@ logout_page = st.Page(
     icon=":material/logout:",
 )
 
-account_pages = [logout_page]
+config_page = st.Page(
+    "pages/config.py",
+    title="Config Page",
+)
+
+account_pages = [logout_page, config_page]
 noauth_pages = [login_page, regist_page]
 chat_pages = [main_page]
 
 dev_mode = os.environ.get("DEV_MODE") == "True"
+if "llm_config" not in st.session_state:
+    llm_config = {
+        "llm_type": "openai",
+        "openai_key": "",
+        "claude_key": "",
+    }
+
+
+if dev_mode:
+    # set test user info
+    rest.set_jwt(os.getenv("TEST_USER_TOKEN"))  # JWT 설정
+    st.session_state["user"] = {
+        "username": os.getenv("TEST_USER_USERNAME"),
+        "user_id": os.getenv("TEST_USER_PK"),
+    }
+    response = rest.get(f"users/llm-key/{st.session_state['user']['user_id']}")
+    st.session_state["llm_config"] = response.json()
+
+
 print(f"dev_mode: {dev_mode}")
 if not dev_mode and (
     not st.session_state.get("user") or not st.session_state["user"].get("username")

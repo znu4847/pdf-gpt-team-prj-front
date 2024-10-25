@@ -47,6 +47,8 @@ def login_submit():
             "user_id": data["pk"],
         }
         st.success("Login Success")
+        response = rest.get(f"users/llm-key/{st.session_state['user']['user_id']}")
+        st.session_state["llm_config"] = response.json()
         st.rerun()
         return True
     # bad request
