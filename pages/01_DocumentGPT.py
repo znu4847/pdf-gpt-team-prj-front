@@ -263,8 +263,18 @@ if select_items:
             index=None,
             format_func=lambda x: x["title"],
         )
-        if st.button("Change Title"):
-            response = change_title()
+        if selected_item:
+            # 대화 제목 변경
+            if st.button("Change Title"):
+                response = change_title()
+
+            # 대화 삭제
+            del_button = st.button("대화 삭제")
+            if del_button:
+                response = rest.delete(f"conversations/{selected_item['pk']}")
+                load_conversations()
+                st.rerun()
+
 
 if file:
     retriever = embed_file(file)

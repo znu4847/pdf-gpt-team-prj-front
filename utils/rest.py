@@ -64,3 +64,15 @@ def put(end_point, form):
             set_jwt(data["jwt"])
 
     return response
+
+
+def delete(end_point):
+    response = requests.delete(
+        f"http://localhost:{PORT_NUM}/api/v1/{end_point}", headers=get_jwt_header()
+    )
+    if response.status_code == 200 or response.status_code == 201:
+        data = response.json()
+        if "jwt" in data:
+            set_jwt(data["jwt"])
+
+    return response
