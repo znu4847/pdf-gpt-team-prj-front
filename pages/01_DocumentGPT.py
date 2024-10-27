@@ -1,25 +1,20 @@
 import os
-from langchain.chat_models import ChatOpenAI
+
+from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
+
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain.document_loaders.pdf import PDFPlumberLoader
+from langchain_community.document_loaders import PDFPlumberLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.storage import LocalFileStore
-from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
-from langchain.vectorstores import FAISS
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain.embeddings import CacheBackedEmbeddings
+
+from langchain_community.vectorstores import FAISS
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 import streamlit as st
 from utils import rest
-
-# 개발 모드일 때 테스트 유저 정보 설정
-dev_mode = os.environ.get("DEV_MODE") == "True"
-if dev_mode:
-    # set test user info
-    rest.set_jwt(os.getenv("TEST_USER_TOKEN"))  # JWT 설정
-    st.session_state["user"] = {
-        "username": os.getenv("TEST_USER_USERNAME"),
-        "user_id": os.getenv("TEST_USER_PK"),
-    }
 
 # 대화 ID 초기화
 if "conversation_id" not in st.session_state:
@@ -57,15 +52,17 @@ retriever = None
 
 @st.cache_resource(show_spinner="Embedding file...")
 def embed_file(file):
+    username = st.session_state["user"]["username"]
     # file저장
     file_content = file.read()
-    file_path = f"./.cache/files/{file.name}"
+    file_path = f"./.cache/{username}/{llm_type}/files/{file.name}"
     folder_path = os.path.dirname(file_path)
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
     with open(file_path, "wb") as f:
         f.write(file_content)
-    embed_path = f"./.cache/embeddings/{file.name}"
+
+    embed_path = f"./.cache/{username}/{llm_type}/embeddings/{file.name}"
     # retriever 초기화
     retriever = initialize_retriever(file_path, embed_path)
 
@@ -138,17 +135,7 @@ def send_message(text, role, save=True):
 
 def paint_history():
     for message in st.session_state["messages"]:
-        if "filename" in message:
-            with open(
-                f"./.cache/agent/{message['filename']}.txt", "r", encoding="utf-8"
-            ) as file:
-                st.download_button(
-                    label="File download",
-                    data=file,
-                    file_name=f"{message['filename']}.txt",
-                )
-        else:
-            send_message(message["text"], message["role"], save=False)
+        send_message(message["text"], message["role"], save=False)
 
 
 def format_docs(docs):
@@ -167,35 +154,56 @@ def invoke_chain(chain, message, context):
 
 
 def memory_load():
-    print("memory_load")
-    print(get_memory().load_memory_variables({})["chat_history"])
     return get_memory().load_memory_variables({})["chat_history"]
 
 
+on_new_token_self = []
+on_new_token_token = []
+on_new_token_args = []
+on_new_token_kargs = []
+
+
 class ChatCallbackHandler(BaseCallbackHandler):
-    message = ""
+    def __init__(self):
+        self.message = ""
+        self.num_of_tokens = 0
+        super().__init__()
 
     def on_llm_start(self, *args, **kargs):
+        self.num_of_tokens = 0
         self.message_box = st.empty()
 
     def on_llm_end(self, *args, **kargs):
         save_message(self.message, "ai")
 
     def on_llm_new_token(self, token, *args, **kargs):
+        self.num_of_tokens += 1
         self.message += token
         self.message_box.markdown(self.message)
 
 
-choose_llm = ChatOpenAI(
-    temperature=0.1,
-    model="gpt-4o",
-)
-answer_llm = ChatOpenAI(
-    temperature=0.1,
-    model="gpt-4o",
-    streaming=True,
-    callbacks=[ChatCallbackHandler()],
-)
+llm_type = st.session_state["llm_config"]["llm_type"]
+llm_model = None
+
+if llm_type == "openai":
+    print("set openai model")
+    llm_model = ChatOpenAI(
+        temperature=0.1,
+        model="gpt-4o",
+        streaming=True,
+        callbacks=[ChatCallbackHandler()],
+    )
+elif llm_type == "claude":
+    print("set claude model")
+    llm_model = ChatAnthropic(
+        temperature=0.1,
+        model="claude-3-haiku-20240307",
+        streaming=True,
+        callbacks=[ChatCallbackHandler()],
+    )
+
+print(f"llm_model: {llm_model._llm_type}")
+print(f"llm_key: {llm_model}")
 
 template = ChatPromptTemplate.from_messages(
     [
@@ -254,7 +262,7 @@ def change_title():
         return response
 
 
-if select_items:
+if len(st.session_state["conversations"]) > 0:
     # 241022 sidebar로 select box 이동
     with st.sidebar:
         selected_item = st.selectbox(
@@ -322,7 +330,12 @@ if retriever:
     if message:
         send_message(message, "human")
         context = format_docs(retriever.get_relevant_documents(message))
-        chain = template | answer_llm
+        chain = template | llm_model
 
         with st.chat_message("ai"):
-            invoke_chain(chain, message, context)
+            try:
+                invoke_chain(chain, message, context)
+            except Exception as e:
+                print(e)
+                st.write("Error occurred while processing the request.")
+                st.write("Please try again.")
