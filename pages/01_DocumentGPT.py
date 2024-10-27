@@ -186,7 +186,13 @@ llm_type = st.session_state["llm_config"]["llm_type"]
 llm_model = None
 
 if llm_type == "openai":
-    print("set openai model")
+    key = st.session_state["llm_config"]["openai_key"]
+    os.environ["OPENAI_API_KEY"] = key
+
+    # if key not start with "sk-" then
+    if not key or not key.startswith("sk-"):
+        st.write("OpenAI API Key를 등록해주세요.")
+        st.stop()
     llm_model = ChatOpenAI(
         temperature=0.1,
         model="gpt-4o",
@@ -194,7 +200,12 @@ if llm_type == "openai":
         callbacks=[ChatCallbackHandler()],
     )
 elif llm_type == "claude":
-    print("set claude model")
+    key = st.session_state["llm_config"]["claude_key"]
+    os.environ["ANTHROPIC_API_KEY"] = key
+
+    if not key or not key.startswith("sk-"):
+        st.write("Claude API Key를 등록해주세요.")
+        st.stop()
     llm_model = ChatAnthropic(
         temperature=0.1,
         model="claude-3-haiku-20240307",

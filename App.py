@@ -55,6 +55,8 @@ noauth_pages = [login_page, regist_page]
 chat_pages = [main_page]
 
 dev_mode = os.environ.get("DEV_MODE") == "True"
+print("--- dev mode ---")
+print(dev_mode)
 if "llm_config" not in st.session_state:
     llm_config = {
         "llm_type": "openai",

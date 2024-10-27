@@ -3,10 +3,9 @@ import streamlit as st
 import requests
 
 
-# set the port number. if os.environ.get("PORT") is None, then set the port number to 9000
-PORT_NUM = os.environ.get("PORT_NUM") if os.environ.get("PORT_NUM") else 9000
-# print(f"PORT_NUM: {os.environ.get("PORT_NUM")}")
-print(f"PORT_NUM: {PORT_NUM}")
+API_URL = (
+    os.environ.get("API_URL") if os.environ.get("API_URL") else "http://localhost:8000"
+)
 
 
 def set_jwt(jwt):
@@ -25,9 +24,7 @@ def reset_jwt():
 
 
 def get(end_point):
-    response = requests.get(
-        f"http://localhost:{PORT_NUM}/api/v1/{end_point}", headers=get_jwt_header()
-    )
+    response = requests.get(f"{API_URL}/api/v1/{end_point}", headers=get_jwt_header())
     if response.status_code == 200 or response.status_code == 201:
         data = response.json()
         if "jwt" in data:
@@ -39,7 +36,7 @@ def get(end_point):
 def post(end_point, form):
     # post api call with header
     response = requests.post(
-        f"http://localhost:{PORT_NUM}/api/v1/{end_point}",
+        f"{API_URL}/api/v1/{end_point}",
         json=form,
         headers=get_jwt_header(),
     )
@@ -54,7 +51,7 @@ def post(end_point, form):
 def put(end_point, form):
     # post api call with header
     response = requests.put(
-        f"http://localhost:{PORT_NUM}/api/v1/{end_point}",
+        f"{API_URL}/api/v1/{end_point}",
         json=form,
         headers=get_jwt_header(),
     )
@@ -68,7 +65,7 @@ def put(end_point, form):
 
 def delete(end_point):
     response = requests.delete(
-        f"http://localhost:{PORT_NUM}/api/v1/{end_point}", headers=get_jwt_header()
+        f"{API_URL}/api/v1/{end_point}", headers=get_jwt_header()
     )
     if response.status_code == 200 or response.status_code == 201:
         data = response.json()
