@@ -33,9 +33,11 @@ def login_submit():
 
     # api call
     try:
+        print("-- login::start")
         response = rest.post("users/login", form)
         data = response.json()
         rest.set_jwt(data["jwt"])
+        print("-- login::end")
     except Exception:
         st.error("Internal Server Error")
         return False

@@ -77,6 +77,7 @@ if dev_mode:
 
 
 print(f"dev_mode: {dev_mode}")
+print(f"url: {os.getenv('API_URL')}")
 if not dev_mode and (
     not st.session_state.get("user") or not st.session_state["user"].get("username")
 ):
