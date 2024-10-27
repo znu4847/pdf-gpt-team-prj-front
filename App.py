@@ -47,7 +47,12 @@ config_page = st.Page(
     title="API 설정",
 )
 
-account_pages = [logout_page, config_page]
+stats_page = st.Page(
+    "pages/stats.py",
+    title="API 사용량",
+)
+
+account_pages = [logout_page, config_page, stats_page]
 noauth_pages = [login_page, regist_page]
 chat_pages = [main_page]
 

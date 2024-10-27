@@ -2,7 +2,7 @@ import openai
 import streamlit as st
 from utils import rest
 
-st.title("Config Page")
+st.title("API 설정")
 
 
 class RadioOption:
