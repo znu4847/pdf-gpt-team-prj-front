@@ -156,12 +156,6 @@ def memory_load():
     return get_memory().load_memory_variables({})["chat_history"]
 
 
-on_new_token_self = []
-on_new_token_token = []
-on_new_token_args = []
-on_new_token_kargs = []
-
-
 class ChatCallbackHandler(BaseCallbackHandler):
     def __init__(self):
         self.message = ""
@@ -186,7 +180,6 @@ llm_model = None
 
 if llm_type == "openai":
     key = st.session_state["llm_config"]["openai_key"]
-    os.environ["OPENAI_API_KEY"] = key
 
     # if key not start with "sk-" then
     if not key or not key.startswith("sk-"):
@@ -197,10 +190,10 @@ if llm_type == "openai":
         model="gpt-4o",
         streaming=True,
         callbacks=[ChatCallbackHandler()],
+        api_key=key,
     )
 elif llm_type == "claude":
     key = st.session_state["llm_config"]["claude_key"]
-    os.environ["ANTHROPIC_API_KEY"] = key
 
     if not key or not key.startswith("sk-"):
         st.write("Claude API Key를 등록해주세요.")
@@ -210,6 +203,7 @@ elif llm_type == "claude":
         model="claude-3-haiku-20240307",
         streaming=True,
         callbacks=[ChatCallbackHandler()],
+        api_key=key,
     )
 
 print(f"llm_model: {llm_model._llm_type}")
@@ -234,7 +228,7 @@ Context:{context}
     ]
 )
 
-st.title("DocumentGPT")
+st.title("PDF Chatbot")
 
 file = None
 
@@ -252,7 +246,7 @@ if st.session_state["conversations"] and len(st.session_state["conversations"]) 
     select_items = [conv for conv in st.session_state["conversations"]]
 
 
-@st.dialog("Chage Title")
+@st.dialog("제목 변경")
 def change_title():
     title = st.text_input("변경할 제목을 입력하세요")
     if st.button("제출"):
@@ -277,12 +271,13 @@ if len(st.session_state["conversations"]) > 0:
         selected_item = st.selectbox(
             "이전 대화를 계속합니다",
             select_items,
+            placeholder="대화를 선택하세요",
             index=None,
             format_func=lambda x: x["title"],
         )
         if selected_item:
             # 대화 제목 변경
-            if st.button("Change Title"):
+            if st.button("제목 변경"):
                 response = change_title()
 
             # 대화 삭제
@@ -315,6 +310,9 @@ def save_memory_history():
     for i in range(0, len(messages), 2):
         if st.session_state["conversation_id"]:
             human_message = messages[i]
+            if i + 1 >= len(messages):
+                return
+
             ai_message = messages[i + 1]
             if human_message["role"] != "human" or ai_message["role"] != "ai":
                 print("Error - human, ai 둘 다 아님!!!!")

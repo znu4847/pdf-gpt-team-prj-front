@@ -9,10 +9,7 @@ st.sidebar.write("This is the main page")
 
 
 def check_logged_in():
-    print("check_logged_in start")
     response = rest.get("users/auth")
-    print(" is user logged in?")
-    print(response.status_code)
     if response.status_code == 401:
         st.error("User is NOT logged in")
     else:

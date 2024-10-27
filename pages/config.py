@@ -1,3 +1,4 @@
+import openai
 import streamlit as st
 from utils import rest
 
@@ -69,11 +70,21 @@ if submit:
         if not openai_key:
             st.error("OpenAI API Key를 입력해주세요.")
             st.stop()
+        client = openai.OpenAI(api_key=openai_key)
+        try:
+            client.models.list()
+        except openai.AuthenticationError:
+            st.error("유효하지 않은 OpenAI API Key입니다.")
+            st.stop()
 
         form["openai_key"] = openai_key
     else:
         if not claude_key:
             st.error("Claude API Key를 입력해주세요.")
+            st.stop()
+
+        if not claude_key.startswith("sk-"):
+            st.error("유효하지 않은 Claude API Key입니다.")
             st.stop()
 
         form["claude_key"] = claude_key

@@ -13,41 +13,38 @@ document_page = st.Page(
 if "user" not in st.session_state:
     st.session_state["user"] = {}
 
-print("is logged in?")
-print(st.session_state["user"])
-
 
 def logout():
-    print("--- logout ---")
     st.session_state["user"] = {}
+    st.session_state["llm_config"] = {}
     rest.reset_jwt()
     st.rerun()
 
 
 main_page = st.Page(
     "pages/01_DocumentGPT.py",
-    title="Main Page",
+    title="대화하기",
     default=True,
 )
 regist_page = st.Page(
     "pages/regist.py",
-    title="Register Page",
+    title="새로 등록하기",
 )
 
 login_page = st.Page(
     "pages/login.py",
-    title="Login Page",
+    title="로그인",
 )
 
 logout_page = st.Page(
     logout,
-    title="Log out",
+    title="로그아웃",
     icon=":material/logout:",
 )
 
 config_page = st.Page(
     "pages/config.py",
-    title="Config Page",
+    title="API 설정",
 )
 
 account_pages = [logout_page, config_page]
@@ -55,8 +52,6 @@ noauth_pages = [login_page, regist_page]
 chat_pages = [main_page]
 
 dev_mode = os.environ.get("DEV_MODE") == "True"
-print("--- dev mode ---")
-print(dev_mode)
 if "llm_config" not in st.session_state:
     llm_config = {
         "llm_type": "openai",
@@ -76,14 +71,12 @@ if dev_mode:
     st.session_state["llm_config"] = response.json()
 
 
-print(f"dev_mode: {dev_mode}")
-print(f"url: {os.getenv('API_URL')}")
 if not dev_mode and (
     not st.session_state.get("user") or not st.session_state["user"].get("username")
 ):
     pg = st.navigation(noauth_pages)
 else:
     pg = st.navigation(
-        {"Account": account_pages, "Main": chat_pages},
+        {"유저 설정": account_pages, "채팅방": chat_pages},
     )
 pg.run()

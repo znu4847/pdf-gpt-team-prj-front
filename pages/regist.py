@@ -3,16 +3,16 @@ from utils import rest
 
 st.set_page_config(page_title="Register")
 
-st.title("Register Page")
+st.title("새로 등록하기")
 
 
 def regist_submit():
     if not username or not password1 or not password2:
-        st.error("Username and password must be filled")
+        st.error("Username과 Password는 필수입니다")
         return False
 
     if password1 != password2:
-        st.error("Password and confirm password must be the same")
+        st.error("입력된 Password가 일치하지 않습니다")
         return False
     form = {
         "username": username,
@@ -20,15 +20,9 @@ def regist_submit():
         "password2": password2,
     }
 
-    print("regist_btn!")
-    print(form)
-
     response = rest.post("users/", form)
-    print("response check222")
-    print(response.status_code)
     try:
         data = response.json()
-        print(data)
     except Exception:
         st.error("Internal Server Error")
         return False
@@ -42,7 +36,7 @@ def regist_submit():
         return True
     # conflict
     elif response.status_code == 409:
-        st.error("Username already exists")
+        st.error("이미 등록된 유저입니다")
         return False
     # bad request
     elif response.status_code == 400:
@@ -65,7 +59,7 @@ else:
     username = st.text_input("Username")
     password1 = st.text_input("Password", type="password")
     password2 = st.text_input("Password(confirm)", type="password")
-    regist_btn = st.button(label="Regist", key="regist", on_click=regist_submit)
+    regist_btn = st.button(label="등록", key="regist", on_click=regist_submit)
 
 
 def reset_user():
