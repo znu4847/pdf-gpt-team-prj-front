@@ -1,14 +1,12 @@
 # Environment
-1. set virtual environment
+1. run poetry shell
     ```sh
-    python -m venv .venv
+    poetry shell
     ```
 
-
-2. install package
+2. install packages
     ```sh
-    source .venv/bin/activate
-    pip install -r requirements.txt
+    poetry install
     ```
 
 3. run streamlit
