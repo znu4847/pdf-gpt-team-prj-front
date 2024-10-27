@@ -1,13 +1,12 @@
 import os
 
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_anthropic import ChatAnthropic
 
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain_community.document_loaders import PDFPlumberLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.storage import LocalFileStore
-from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.embeddings import CacheBackedEmbeddings
 
 from langchain_community.vectorstores import FAISS
@@ -214,7 +213,6 @@ elif llm_type == "claude":
     )
 
 print(f"llm_model: {llm_model._llm_type}")
-print(f"llm_key: {llm_model}")
 
 template = ChatPromptTemplate.from_messages(
     [
@@ -340,7 +338,7 @@ if retriever:
     message = st.chat_input("Ask anything about your file...")
     if message:
         send_message(message, "human")
-        context = format_docs(retriever.get_relevant_documents(message))
+        context = format_docs(retriever.invoke(message))
         chain = template | llm_model
 
         with st.chat_message("ai"):
