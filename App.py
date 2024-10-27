@@ -50,7 +50,12 @@ config_page = st.Page(
     title="Config Page",
 )
 
-account_pages = [logout_page, config_page]
+stats_page = st.Page(
+    "pages/stats.py",
+    title="Stats Page",
+)
+
+account_pages = [logout_page, config_page, stats_page]
 noauth_pages = [login_page, regist_page]
 chat_pages = [main_page]
 
@@ -86,4 +91,5 @@ else:
     pg = st.navigation(
         {"Account": account_pages, "Main": chat_pages},
     )
+# st.write(1)
 pg.run()

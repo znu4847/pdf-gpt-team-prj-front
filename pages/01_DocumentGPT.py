@@ -9,12 +9,20 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.storage import LocalFileStore
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.embeddings import CacheBackedEmbeddings
-
+from langchain.schema.runnable import RunnablePassthrough
 from langchain_community.vectorstores import FAISS
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 import streamlit as st
 from utils import rest
+import tiktoken
+
+MODEL_COST_PER_1K_TOKENS = {
+    "gpt-4o-input": 0.0025,
+    "gpt-4o-output": 0.01,
+    "claude-3.5-sonnet-input": 0.003,
+    "claude-3.5-sonnet-output": 0.015,
+}
 
 # 대화 ID 초기화
 if "conversation_id" not in st.session_state:
@@ -143,13 +151,47 @@ def format_docs(docs):
 
 
 def invoke_chain(chain, message, context):
-    result = chain.invoke(
+    formatted_prompt = template.format(
+        chat_history=memory_load(), context=context, question=message
+    )
+    result = chain.invoke(formatted_prompt).content.replace("$", "\$")
+    if llm_type == "openai":
+        encoder = tiktoken.get_encoding("o200k_base")
+        prompt_token = encoder.encode(formatted_prompt)
+        # print(
+        #     "len - prompt_token ---------------------------------------",
+        #     len(prompt_token),
+        # )
+        completion_token = encoder.encode(result)
+        # print(len(completion_token))
+        total_token = len(prompt_token) + len(completion_token)
+        charge = (
+            len(prompt_token) * float(MODEL_COST_PER_1K_TOKENS["gpt-4o-input"])
+            + len(completion_token) * float(MODEL_COST_PER_1K_TOKENS["gpt-4o-output"])
+        ) * 0.001
+        # print("charge ---------------------------------------   $", charge)
+    if llm_type == "claude":
+        # print("formatted_prompt ------------------------------", formatted_prompt)
+        len_prompt_token = llm_model.get_num_tokens(formatted_prompt)
+        # print("len_prompt_token ---------------------------------", len_prompt_token)
+        # print("result  ------------------------------", result)
+        len_completion_token = llm_model.get_num_tokens(result)
+        # print("len_result ---------------------------------", len_completion_token)
+        total_token = len_prompt_token + len_completion_token
+        charge = (
+            len_prompt_token
+            * float(MODEL_COST_PER_1K_TOKENS["claude-3.5-sonnet-input"])
+            + len_completion_token
+            * float(MODEL_COST_PER_1K_TOKENS["claude-3.5-sonnet-output"])
+        ) * 0.001
+        # print("charge ---------------------------------------   $", charge)
+    response = rest.put(
+        f"conversations/token/{st.session_state['conversation_id']}",
         {
-            "chat_history": memory_load(),
-            "context": context,
-            "question": message,
-        }
-    ).content.replace("$", "\$")
+            "tokens": total_token,
+            "charges": charge,
+        },
+    )
     get_memory().save_context({"input": message}, {"output": result})
 
 
@@ -187,6 +229,7 @@ llm_model = None
 
 if llm_type == "openai":
     key = st.session_state["llm_config"]["openai_key"]
+    print("key------------------------------------", key)
     os.environ["OPENAI_API_KEY"] = key
 
     # if key not start with "sk-" then
@@ -341,12 +384,13 @@ if retriever:
     if message:
         send_message(message, "human")
         context = format_docs(retriever.get_relevant_documents(message))
-        chain = template | llm_model
+        chain = RunnablePassthrough() | llm_model
 
         with st.chat_message("ai"):
-            try:
-                invoke_chain(chain, message, context)
-            except Exception as e:
-                print(e)
-                st.write("Error occurred while processing the request.")
-                st.write("Please try again.")
+            invoke_chain(chain, message, context)
+            # try:
+            #     invoke_chain(chain, message, context)
+            # except Exception as e:
+            #     print(e)
+            #     st.write("Error occurred while processing the request.")
+            #     st.write("Please try again.")
