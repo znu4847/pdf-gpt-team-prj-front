@@ -62,16 +62,20 @@ claude_key = st.text_input(
 
 submit = st.button("저장")
 if submit:
-    print(selected.value)
-    print(selected.key)
-    print(openai_key)
-    print(claude_key)
     form = {
         "llm_type": selected.value,
     }
     if selected.value == "openai":
+        if not openai_key:
+            st.error("OpenAI API Key를 입력해주세요.")
+            st.stop()
+
         form["openai_key"] = openai_key
     else:
+        if not claude_key:
+            st.error("Claude API Key를 입력해주세요.")
+            st.stop()
+
         form["claude_key"] = claude_key
 
     user_id = st.session_state["user"]["user_id"]
@@ -79,8 +83,6 @@ if submit:
         f"users/llm-key/{user_id}",
         form,
     )
-    print("config - response")
-    print(response.json())
     if response.status_code == 200:
         st.session_state["llm_config"] = response.json()
         st.success("저장되었습니다.")
