@@ -26,6 +26,17 @@ main_page = st.Page(
     title="대화하기",
     default=True,
 )
+
+chat_new_page = st.Page(
+    "pages/chat_new.py",
+    title="새로운 채팅",
+)
+
+chat_contuine_page = st.Page(
+    "pages/chat_continue.py",
+    title="이어서 채팅",
+)
+
 regist_page = st.Page(
     "pages/regist.py",
     title="새로 등록하기",
@@ -54,9 +65,10 @@ stats_page = st.Page(
 
 account_pages = [logout_page, config_page, stats_page]
 noauth_pages = [login_page, regist_page]
-chat_pages = [main_page]
+chat_pages = [chat_new_page, chat_contuine_page]
 
-dev_mode = os.environ.get("DEV_MODE") == "True"
+# dev_mode = os.environ.get("DEV_MODE") == "True"
+dev_mode = True
 if "llm_config" not in st.session_state:
     llm_config = {
         "llm_type": "openai",
