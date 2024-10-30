@@ -29,12 +29,13 @@ main_page = st.Page(
 
 chat_new_page = st.Page(
     "pages/chat_new.py",
-    title="새로운 채팅",
+    title="새로 시작",
+    default=True,
 )
 
 chat_contuine_page = st.Page(
     "pages/chat_continue.py",
-    title="이어서 채팅",
+    title="이어하기",
 )
 
 regist_page = st.Page(

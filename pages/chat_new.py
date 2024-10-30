@@ -23,26 +23,9 @@ MODEL_COST_PER_1K_TOKENS = {
     "claude-3.5-sonnet-output": 0.015,
 }
 
-# 대화 ID 초기화
-if "conversation_id" not in st.session_state:
-    st.session_state["conversation_id"] = None
-
-# 대화 변경 체크를 위한 ID 초기화
-if "bef_conversation_id" not in st.session_state:
-    st.session_state["bef_conversation_id"] = None
-
 # 메시지 초기화
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
-
-
-def load_conversations():
-    response = rest.get("conversations/")
-    st.session_state["conversations"] = response.json()["data"]
-
-
-if "conversations" not in st.session_state:
-    load_conversations()
 
 
 def get_memory():
@@ -86,7 +69,6 @@ def embed_file(file):
     )
     st.session_state["messages"] = []
     st.session_state["conversation_id"] = response.json()["pk"]
-    load_conversations()
 
     return retriever
 
@@ -274,75 +256,14 @@ st.title("PDF Chatbot")
 
 file = None
 
-# 입력 api 확인
-# 241022 sidebar로 file uploader 이동
-with st.sidebar:
-    file = st.file_uploader(
-        "PDF 파일을 업로드하여 대화를 시작합니다",
-        type=["pdf"],
-    )
-
-select_items = None
-selected_item = None
-if st.session_state["conversations"] and len(st.session_state["conversations"]) > 0:
-    select_items = [conv for conv in st.session_state["conversations"]]
-
-
-@st.dialog("제목 변경")
-def change_title():
-    title = st.text_input("변경할 제목을 입력하세요")
-    if st.button("제출"):
-        # for conversation in st.session_state["conversations"]:
-        #     if conversation["pk"] == st.session_state["conversation_id"]:
-        #         conversation.[title] = title
-        #         break
-        response = rest.put(
-            f"conversations/{st.session_state['conversation_id']}",
-            {
-                "title": title,
-            },
-        )
-        load_conversations()
-        st.rerun()
-        return response
-
-
-if len(st.session_state["conversations"]) > 0:
-    # 241022 sidebar로 select box 이동
-    with st.sidebar:
-        selected_item = st.selectbox(
-            "이전 대화를 계속합니다",
-            select_items,
-            placeholder="대화를 선택하세요",
-            index=None,
-            format_func=lambda x: x["title"],
-        )
-        if selected_item:
-            # 대화 제목 변경
-            if st.button("제목 변경"):
-                response = change_title()
-
-            # 대화 삭제
-            del_button = st.button("대화 삭제")
-            if del_button:
-                response = rest.delete(f"conversations/{selected_item['pk']}")
-                load_conversations()
-                st.rerun()
-
+file = st.file_uploader(
+    "PDF 파일을 업로드하여 대화를 시작합니다",
+    type=["pdf"],
+)
 
 if file:
     retriever = embed_file(file)
     send_message("I'm ready! Ask away!", "ai", save=False)
-    paint_history()
-
-
-def load_messages():
-    conversation_id = st.session_state.get("conversation_id")
-    if conversation_id is None:
-        st.session_state["messages"] = []
-        return
-    response = rest.get(f"messages/?conversation={st.session_state['conversation_id']}")
-    st.session_state["messages"] = response.json()
     paint_history()
 
 
@@ -362,17 +283,6 @@ def save_memory_history():
             answer = ai_message["text"]
             get_memory().save_context({"input": question}, {"output": answer})
 
-
-if selected_item:
-    st.session_state["messages"] = []
-    st.session_state["conversation_id"] = selected_item["pk"]
-    file_path = selected_item["pdf_url"]
-    embed_path = selected_item["embed_url"]
-    retriever = initialize_retriever(file_path, embed_path)
-    load_messages()
-    if st.session_state["bef_conversation_id"] != st.session_state["conversation_id"]:
-        st.session_state["bef_conversation_id"] = st.session_state["conversation_id"]
-        save_memory_history()
 
 if retriever:
     message = st.chat_input("Ask anything about your file...")

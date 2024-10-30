@@ -57,40 +57,6 @@ def get_memory():
 retriever = None
 
 
-@st.cache_resource(show_spinner="Embedding file...")
-def embed_file(file):
-    username = st.session_state["user"]["username"]
-    # file저장
-    file_content = file.read()
-    file_path = f"./.cache/{username}/{llm_type}/files/{file.name}"
-    folder_path = os.path.dirname(file_path)
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-    with open(file_path, "wb") as f:
-        f.write(file_content)
-
-    embed_path = f"./.cache/{username}/{llm_type}/embeddings/{file.name}"
-    # retriever 초기화
-    retriever = initialize_retriever(file_path, embed_path)
-
-    user = st.session_state["user"]
-
-    response = rest.post(
-        "conversations/",
-        {
-            "user": user["user_id"],
-            "title": file.name,
-            "pdf_url": file_path,
-            "embed_url": embed_path,
-        },
-    )
-    st.session_state["messages"] = []
-    st.session_state["conversation_id"] = response.json()["pk"]
-    load_conversations()
-
-    return retriever
-
-
 def initialize_retriever(file_path, embed_path):
     # 불러오기
     loader = PDFPlumberLoader(file_path)
@@ -272,16 +238,6 @@ Context:{context}
 
 st.title("PDF Chatbot")
 
-file = None
-
-# 입력 api 확인
-# 241022 sidebar로 file uploader 이동
-with st.sidebar:
-    file = st.file_uploader(
-        "PDF 파일을 업로드하여 대화를 시작합니다",
-        type=["pdf"],
-    )
-
 select_items = None
 selected_item = None
 if st.session_state["conversations"] and len(st.session_state["conversations"]) > 0:
@@ -328,12 +284,6 @@ if len(st.session_state["conversations"]) > 0:
                 response = rest.delete(f"conversations/{selected_item['pk']}")
                 load_conversations()
                 st.rerun()
-
-
-if file:
-    retriever = embed_file(file)
-    send_message("I'm ready! Ask away!", "ai", save=False)
-    paint_history()
 
 
 def load_messages():
